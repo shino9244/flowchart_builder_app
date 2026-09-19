@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FlowCraft - レスポンシブ フローチャート ビルダー</title>
-<link rel="manifest" href="manifest.json">
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
-  }
-</script>
+    <link rel="manifest" href="manifest.json">
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+      }
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -18,6 +18,11 @@
             user-select: none;
             -webkit-user-select: none;
             overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+        #canvas-container {
+            touch-action: none;
         }
         .canvas-grid {
             background-size: 20px 20px;
@@ -130,7 +135,7 @@
                     <li class="flex items-start gap-1.5"><i data-lucide="trash-2" class="w-3.5 h-3.5 mt-0.5 text-rose-500 shrink-0"></i> <span><b>削除</b>: Deleteキーまたは上部ボタン</span></li>
                     <li class="flex items-start gap-1.5"><i data-lucide="move" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>移動</b>: ドラッグして位置変更</span></li>
                     <li class="flex items-start gap-1.5"><i data-lucide="link-2" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>接続</b>: 右端の円をドラッグ</span></li>
-                    <li class="flex items-start gap-1.5"><i data-lucide="edit-3" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>編集</b>: ダブルクリックでテキスト変更</span></li>
+                    <li class="flex items-start gap-1.5"><i data-lucide="edit-3" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>編集</b>: ダブルクリック/タップでテキスト変更</span></li>
                 </ul>
             </div>
         </aside>
@@ -535,6 +540,10 @@
 
         window.addEventListener('touchmove', (e) => {
             if (e.touches.length === 1) {
+                if (state.isConnecting || isDraggingNode || isPanning) {
+                    if (e.cancelable) e.preventDefault();
+                }
+
                 const touch = e.touches[0];
                 if (state.isConnecting) {
                     updateTempConnection(touch.clientX, touch.clientY);
@@ -549,7 +558,7 @@
                     render();
                 }
             }
-        }, { passive: true });
+        }, { passive: false });
 
         window.addEventListener('touchend', (e) => {
             if (isDraggingNode) { isDraggingNode = false; draggedNode = null; saveState(); }
