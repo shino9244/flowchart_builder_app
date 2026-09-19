@@ -208,7 +208,7 @@
     </div>
 
     <script>
-        const HIT_PADDING = 16; // ドラッグ・タップ判定を広げる余白 (px)
+        const HIT_PADDING = 20; // タッチ領域をさらに広めに確保 (px)
 
         const state = {
             nodes: [], connections: [], scale: 1, pan: { x: 0, y: 0 },
@@ -350,7 +350,7 @@
                 const isSelected = state.selectedNodeId === node.id;
                 const isDraggingThis = isDraggingNode && draggedNode?.id === node.id;
 
-                // 透明な見えない判定枠（Hit target area）
+                // 透明な判定枠（Hit target area）：親Wrapper自体がタッチを検知
                 const wrapper = document.createElement('div');
                 wrapper.dataset.nodeId = node.id;
                 wrapper.className = `node-wrapper absolute pointer-events-auto cursor-grab active:cursor-grabbing ${isDraggingThis ? 'is-dragging' : ''}`;
@@ -360,10 +360,11 @@
                 wrapper.style.height = `${node.height + HIT_PADDING * 2}px`;
                 wrapper.style.padding = `${HIT_PADDING}px`;
                 wrapper.style.zIndex = isSelected ? '20' : '10';
+                wrapper.style.touchAction = 'none'; // タッチによる不要な操作を防止
 
-                // 実際の見た目を担当するノード本体
+                // ノード本体（内部要素によるクリック・タッチ遮断を防ぐために pointer-events-none を指定）
                 const el = document.createElement('div');
-                el.className = `node-body w-full h-full flex items-center justify-center text-center p-2 transition-all relative ${
+                el.className = `node-body w-full h-full flex items-center justify-center text-center p-2 transition-all relative pointer-events-none ${
                     isSelected ? 'ring-4 ring-indigo-500 ring-offset-2 shadow-xl' : 'shadow-md hover:shadow-lg'
                 }`;
 
@@ -379,7 +380,7 @@
                 else if (node.type === 'note') { el.style.borderRadius = '4px'; el.style.borderStyle = 'dashed'; }
                 else el.style.borderRadius = '12px';
 
-                // ドラッググリップハンドルアイコン
+                // ドラッグ表示用アイコン
                 const dragHandle = document.createElement('div');
                 dragHandle.className = 'absolute -top-2 -left-2 bg-white border border-slate-300 rounded-full p-0.5 shadow-sm text-slate-400 flex items-center justify-center z-30 pointer-events-none';
                 if (node.type === 'diamond') dragHandle.style.transform = 'rotate(-45deg)';
@@ -393,9 +394,9 @@
                 textEl.textContent = node.text;
                 el.appendChild(textEl);
 
-                // 接続用ハンドル（右端）
+                // 接続ハンドル（ここだけ個別にタッチを受け取る）
                 const handle = document.createElement('div');
-                handle.className = 'absolute -right-2 top-1/2 -translate-y-1/2 w-5 h-5 bg-white border-2 border-indigo-600 rounded-full cursor-crosshair hover:scale-125 transition-transform shadow-sm flex items-center justify-center z-30 connect-handle';
+                handle.className = 'absolute -right-2 top-1/2 -translate-y-1/2 w-6 h-6 bg-white border-2 border-indigo-600 rounded-full cursor-crosshair shadow-sm flex items-center justify-center z-30 connect-handle pointer-events-auto';
                 if (node.type === 'diamond') handle.style.transform = 'rotate(-45deg) translate(10px, -10px)';
                 handle.dataset.nodeId = node.id;
                 el.appendChild(handle);
@@ -491,7 +492,7 @@
                 if (e.touches.length === 1) {
                     handleInteractStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
                 }
-            }, { passive: true });
+            }, { passive: false });
         }
 
         let isPanning = false;
