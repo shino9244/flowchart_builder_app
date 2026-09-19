@@ -131,11 +131,11 @@
             <div>
                 <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">操作ガイド</h2>
                 <ul class="text-xs text-slate-500 space-y-2">
-                    <li class="flex items-start gap-1.5"><i data-lucide="pointer" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>選択</b>: クリック/タップで選択</span></li>
-                    <li class="flex items-start gap-1.5"><i data-lucide="trash-2" class="w-3.5 h-3.5 mt-0.5 text-rose-500 shrink-0"></i> <span><b>削除</b>: Deleteキーまたは上部ボタン</span></li>
+                    <li class="flex items-start gap-1.5"><i data-lucide="pointer" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>選択</b>: タップ / クリック</span></li>
+                    <li class="flex items-start gap-1.5"><i data-lucide="edit-3" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>編集</b>: ロングタップ / Wクリック</span></li>
                     <li class="flex items-start gap-1.5"><i data-lucide="move" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>移動</b>: ドラッグして位置変更</span></li>
                     <li class="flex items-start gap-1.5"><i data-lucide="link-2" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>接続</b>: 右端の円をドラッグ</span></li>
-                    <li class="flex items-start gap-1.5"><i data-lucide="edit-3" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>編集</b>: ダブルクリック/タップでテキスト変更</span></li>
+                    <li class="flex items-start gap-1.5"><i data-lucide="trash-2" class="w-3.5 h-3.5 mt-0.5 text-rose-500 shrink-0"></i> <span><b>削除</b>: Deleteキーまたは上部ボタン</span></li>
                 </ul>
             </div>
         </aside>
@@ -420,23 +420,25 @@
         let isDraggingNode = false;
         let draggedNode = null;
         let dragOffset = { x: 0, y: 0 };
-        let hasDragged = false;
         
-        let lastNodeClickTime = 0;
-        let lastNodeClickId = null;
+        let touchStartPos = { x: 0, y: 0 };
+        let longPressTimer = null;
+        let isLongPress = false;
+        const LONG_PRESS_DURATION = 500; // 500msでロングタップ判定
+        const DRAG_THRESHOLD = 5; // 5px以上の移動でドラッグ判定
+
+        function clearLongPress() {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        }
 
         function setupNodeEvents(el, node) {
-            const handleInteract = (clientX, clientY, target) => {
-                hasDragged = false;
-                
-                const now = Date.now();
-                if (lastNodeClickId === node.id && (now - lastNodeClickTime) < 300) {
-                    openEditModal(node);
-                    lastNodeClickId = null;
-                    return;
-                }
-                lastNodeClickTime = now;
-                lastNodeClickId = node.id;
+            const handleInteractStart = (clientX, clientY, target) => {
+                clearLongPress();
+                isLongPress = false;
+                touchStartPos = { x: clientX, y: clientY };
 
                 if (target.classList.contains('connect-handle')) {
                     state.isConnecting = true;
@@ -446,29 +448,43 @@
                     return;
                 }
 
+                // タップで即座に選択
                 state.selectedNodeId = node.id;
                 state.selectedConnectionId = null;
-                
-                isDraggingNode = true;
+                render();
+
                 draggedNode = node;
                 dragOffset.x = (clientX - state.pan.x) / state.scale - node.x;
                 dragOffset.y = (clientY - state.pan.y) / state.scale - node.y;
 
-                render();
+                // ロングタップ（モーダル表示）タイマー開始
+                longPressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    isDraggingNode = false;
+                    draggedNode = null;
+                    openEditModal(node);
+                }, LONG_PRESS_DURATION);
             };
 
             el.addEventListener('mousedown', (e) => {
                 if (e.button !== 0) return;
                 e.stopPropagation();
-                handleInteract(e.clientX, e.clientY, e.target);
+                handleInteractStart(e.clientX, e.clientY, e.target);
             });
 
             el.addEventListener('touchstart', (e) => {
                 e.stopPropagation();
                 if (e.touches.length === 1) {
-                    handleInteract(e.touches[0].clientX, e.touches[0].clientY, e.target);
+                    handleInteractStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
                 }
             }, { passive: true });
+
+            // デスク環境用のダブルクリックでのモーダル表示も保持
+            el.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                clearLongPress();
+                openEditModal(node);
+            });
         }
 
         let isPanning = false;
@@ -485,32 +501,49 @@
             }
         });
 
-        window.addEventListener('mousemove', (e) => {
+        const handlePointerMove = (clientX, clientY) => {
             if (state.isConnecting) {
-                updateTempConnection(e.clientX, e.clientY);
-            } else if (isDraggingNode && draggedNode) {
-                hasDragged = true;
-                draggedNode.x = (e.clientX - state.pan.x) / state.scale - dragOffset.x;
-                draggedNode.y = (e.clientY - state.pan.y) / state.scale - dragOffset.y;
-                render();
+                updateTempConnection(clientX, clientY);
+            } else if (draggedNode && !isLongPress) {
+                const dist = Math.hypot(clientX - touchStartPos.x, clientY - touchStartPos.y);
+                if (dist > DRAG_THRESHOLD) {
+                    clearLongPress(); // 移動が一定を超えたらロングタップをキャンセル
+                    isDraggingNode = true;
+                }
+                if (isDraggingNode) {
+                    draggedNode.x = (clientX - state.pan.x) / state.scale - dragOffset.x;
+                    draggedNode.y = (clientY - state.pan.y) / state.scale - dragOffset.y;
+                    render();
+                }
             } else if (isPanning) {
-                state.pan.x = e.clientX - panStart.x;
-                state.pan.y = e.clientY - panStart.y;
+                state.pan.x = clientX - panStart.x;
+                state.pan.y = clientY - panStart.y;
                 render();
             }
+        };
+
+        window.addEventListener('mousemove', (e) => {
+            handlePointerMove(e.clientX, e.clientY);
         });
 
-        window.addEventListener('mouseup', (e) => {
-            if (isDraggingNode) { isDraggingNode = false; draggedNode = null; saveState(); }
+        const handlePointerUp = (clientX, clientY) => {
+            clearLongPress();
+
+            if (isDraggingNode) {
+                isDraggingNode = false;
+                draggedNode = null;
+                saveState();
+            }
+            draggedNode = null;
             if (isPanning) isPanning = false;
-            
+
             if (state.isConnecting) {
                 tempConnection.classList.add('hidden');
                 document.querySelectorAll('.node-element').forEach(n => n.style.pointerEvents = 'auto');
 
-                const targetEl = document.elementFromPoint(e.clientX, e.clientY);
+                const targetEl = document.elementFromPoint(clientX, clientY);
                 const targetNodeEl = targetEl?.closest('[data-node-id]');
-                
+
                 if (targetNodeEl) {
                     const targetNodeId = targetNodeEl.dataset.nodeId;
                     if (targetNodeId && targetNodeId !== state.connectingStartNodeId) {
@@ -525,6 +558,10 @@
                 state.connectingStartNodeId = null;
                 render();
             }
+        };
+
+        window.addEventListener('mouseup', (e) => {
+            handlePointerUp(e.clientX, e.clientY);
         });
 
         container.addEventListener('touchstart', (e) => {
@@ -543,49 +580,19 @@
                 if (state.isConnecting || isDraggingNode || isPanning) {
                     if (e.cancelable) e.preventDefault();
                 }
-
                 const touch = e.touches[0];
-                if (state.isConnecting) {
-                    updateTempConnection(touch.clientX, touch.clientY);
-                } else if (isDraggingNode && draggedNode) {
-                    hasDragged = true;
-                    draggedNode.x = (touch.clientX - state.pan.x) / state.scale - dragOffset.x;
-                    draggedNode.y = (touch.clientY - state.pan.y) / state.scale - dragOffset.y;
-                    render();
-                } else if (isPanning) {
-                    state.pan.x = touch.clientX - panStart.x;
-                    state.pan.y = touch.clientY - panStart.y;
-                    render();
-                }
+                handlePointerMove(touch.clientX, touch.clientY);
             }
         }, { passive: false });
 
         window.addEventListener('touchend', (e) => {
-            if (isDraggingNode) { isDraggingNode = false; draggedNode = null; saveState(); }
-            if (isPanning) isPanning = false;
-
-            if (state.isConnecting) {
-                tempConnection.classList.add('hidden');
-                document.querySelectorAll('.node-element').forEach(n => n.style.pointerEvents = 'auto');
-
-                const touch = e.changedTouches[0];
-                if (touch) {
-                    const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
-                    const targetNodeEl = targetEl?.closest('[data-node-id]');
-                    if (targetNodeEl) {
-                        const targetNodeId = targetNodeEl.dataset.nodeId;
-                        if (targetNodeId && targetNodeId !== state.connectingStartNodeId) {
-                            const exists = state.connections.some(c => c.from === state.connectingStartNodeId && c.to === targetNodeId);
-                            if (!exists) {
-                                state.connections.push({ id: generateId(), from: state.connectingStartNodeId, to: targetNodeId });
-                                saveState();
-                            }
-                        }
-                    }
-                }
-                state.isConnecting = false;
-                state.connectingStartNodeId = null;
-                render();
+            clearLongPress();
+            const touch = e.changedTouches[0];
+            if (touch) {
+                handlePointerUp(touch.clientX, touch.clientY);
+            } else {
+                if (isDraggingNode) { isDraggingNode = false; draggedNode = null; saveState(); }
+                if (isPanning) isPanning = false;
             }
         });
 
