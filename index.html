@@ -42,8 +42,7 @@
         .shape-parallelogram-content {
             transform: skewX(15deg);
         }
-        /* ドラッグ中のノードスタイル表現 */
-        .node-wrapper.is-dragging .node-body {
+        .node-element.is-dragging {
             transform: scale(1.05);
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             z-index: 50 !important;
@@ -137,9 +136,9 @@
             <div>
                 <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">操作ガイド</h2>
                 <ul class="text-xs text-slate-500 space-y-2">
-                    <li class="flex items-start gap-1.5"><i data-lucide="pointer" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>選択</b>: タップ / クリック</span></li>
+                    <li class="flex items-start gap-1.5"><i data-lucide="pointer" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>選択</b>: ノード内をタップ</span></li>
+                    <li class="flex items-start gap-1.5"><i data-lucide="move" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>移動</b>: ノード内をドラッグ</span></li>
                     <li class="flex items-start gap-1.5"><i data-lucide="edit-3" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>編集</b>: 下部入力欄でテキスト変更</span></li>
-                    <li class="flex items-start gap-1.5"><i data-lucide="move" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>移動</b>: ノード本体または周囲をドラッグ</span></li>
                     <li class="flex items-start gap-1.5"><i data-lucide="link-2" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>接続</b>: 右端の円をドラッグ</span></li>
                     <li class="flex items-start gap-1.5"><i data-lucide="trash-2" class="w-3.5 h-3.5 mt-0.5 text-rose-500 shrink-0"></i> <span><b>削除</b>: Deleteキーまたは上部ボタン</span></li>
                 </ul>
@@ -208,8 +207,6 @@
     </div>
 
     <script>
-        const HIT_PADDING = 20; // タッチ領域をさらに広めに確保 (px)
-
         const state = {
             nodes: [], connections: [], scale: 1, pan: { x: 0, y: 0 },
             selectedNodeId: null, selectedConnectionId: null,
@@ -350,23 +347,19 @@
                 const isSelected = state.selectedNodeId === node.id;
                 const isDraggingThis = isDraggingNode && draggedNode?.id === node.id;
 
-                // 透明な判定枠（Hit target area）：親Wrapper自体がタッチを検知
-                const wrapper = document.createElement('div');
-                wrapper.dataset.nodeId = node.id;
-                wrapper.className = `node-wrapper absolute pointer-events-auto cursor-grab active:cursor-grabbing ${isDraggingThis ? 'is-dragging' : ''}`;
-                wrapper.style.left = `${node.x - HIT_PADDING}px`;
-                wrapper.style.top = `${node.y - HIT_PADDING}px`;
-                wrapper.style.width = `${node.width + HIT_PADDING * 2}px`;
-                wrapper.style.height = `${node.height + HIT_PADDING * 2}px`;
-                wrapper.style.padding = `${HIT_PADDING}px`;
-                wrapper.style.zIndex = isSelected ? '20' : '10';
-                wrapper.style.touchAction = 'none'; // タッチによる不要な操作を防止
-
-                // ノード本体（内部要素によるクリック・タッチ遮断を防ぐために pointer-events-none を指定）
+                // ノード本体（外側のマージン判定を廃止し、正確なサイズに配置）
                 const el = document.createElement('div');
-                el.className = `node-body w-full h-full flex items-center justify-center text-center p-2 transition-all relative pointer-events-none ${
-                    isSelected ? 'ring-4 ring-indigo-500 ring-offset-2 shadow-xl' : 'shadow-md hover:shadow-lg'
-                }`;
+                el.dataset.nodeId = node.id;
+                el.className = `node-element absolute pointer-events-auto cursor-grab active:cursor-grabbing flex items-center justify-center text-center p-2 transition-all select-none ${
+                    isDraggingThis ? 'is-dragging' : ''
+                } ${isSelected ? 'ring-4 ring-indigo-500 ring-offset-2 shadow-xl' : 'shadow-md hover:shadow-lg'}`;
+
+                el.style.left = `${node.x}px`;
+                el.style.top = `${node.y}px`;
+                el.style.width = `${node.width}px`;
+                el.style.height = `${node.height}px`;
+                el.style.zIndex = isSelected ? '20' : '10';
+                el.style.touchAction = 'none';
 
                 const color = COLORS[node.colorIdx] || COLORS[0];
                 el.style.backgroundColor = color.bg;
@@ -380,13 +373,7 @@
                 else if (node.type === 'note') { el.style.borderRadius = '4px'; el.style.borderStyle = 'dashed'; }
                 else el.style.borderRadius = '12px';
 
-                // ドラッグ表示用アイコン
-                const dragHandle = document.createElement('div');
-                dragHandle.className = 'absolute -top-2 -left-2 bg-white border border-slate-300 rounded-full p-0.5 shadow-sm text-slate-400 flex items-center justify-center z-30 pointer-events-none';
-                if (node.type === 'diamond') dragHandle.style.transform = 'rotate(-45deg)';
-                dragHandle.innerHTML = `<i data-lucide="move" class="w-3 h-3 text-slate-500"></i>`;
-                el.appendChild(dragHandle);
-
+                // テキスト表示
                 const textEl = document.createElement('div');
                 textEl.className = 'font-medium text-xs sm:text-sm select-none break-words w-full px-1 line-clamp-3 leading-snug pointer-events-none';
                 if (node.type === 'diamond') textEl.style.transform = 'rotate(-45deg)';
@@ -394,16 +381,15 @@
                 textEl.textContent = node.text;
                 el.appendChild(textEl);
 
-                // 接続ハンドル（ここだけ個別にタッチを受け取る）
+                // 接続ハンドル（右端の円）
                 const handle = document.createElement('div');
                 handle.className = 'absolute -right-2 top-1/2 -translate-y-1/2 w-6 h-6 bg-white border-2 border-indigo-600 rounded-full cursor-crosshair shadow-sm flex items-center justify-center z-30 connect-handle pointer-events-auto';
                 if (node.type === 'diamond') handle.style.transform = 'rotate(-45deg) translate(10px, -10px)';
                 handle.dataset.nodeId = node.id;
                 el.appendChild(handle);
 
-                wrapper.appendChild(el);
-                setupNodeEvents(wrapper, node);
-                nodesContainer.appendChild(wrapper);
+                setupNodeEvents(el, node);
+                nodesContainer.appendChild(el);
             });
         }
 
@@ -467,7 +453,7 @@
                 if (target.classList.contains('connect-handle')) {
                     state.isConnecting = true;
                     state.connectingStartNodeId = node.id;
-                    document.querySelectorAll('.node-wrapper').forEach(n => n.style.pointerEvents = 'none');
+                    document.querySelectorAll('.node-element').forEach(n => n.style.pointerEvents = 'none');
                     updateTempConnection(clientX, clientY);
                     return;
                 }
@@ -544,7 +530,7 @@
 
             if (state.isConnecting) {
                 tempConnection.classList.add('hidden');
-                document.querySelectorAll('.node-wrapper').forEach(n => n.style.pointerEvents = 'auto');
+                document.querySelectorAll('.node-element').forEach(n => n.style.pointerEvents = 'auto');
 
                 const targetEl = document.elementFromPoint(clientX, clientY);
                 const targetNodeEl = targetEl?.closest('[data-node-id]');
