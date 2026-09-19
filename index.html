@@ -42,6 +42,12 @@
         .shape-parallelogram-content {
             transform: skewX(15deg);
         }
+        /* ドラッグ中のノードスタイル表現 */
+        .node-element.is-dragging {
+            transform: scale(1.05);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            z-index: 50 !important;
+        }
     </style>
 </head>
 <body class="h-full w-full bg-slate-100 text-slate-800 flex flex-col font-sans select-none overflow-hidden">
@@ -133,7 +139,7 @@
                 <ul class="text-xs text-slate-500 space-y-2">
                     <li class="flex items-start gap-1.5"><i data-lucide="pointer" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>選択</b>: タップ / クリック</span></li>
                     <li class="flex items-start gap-1.5"><i data-lucide="edit-3" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>編集</b>: 下部入力欄でテキスト変更</span></li>
-                    <li class="flex items-start gap-1.5"><i data-lucide="move" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>移動</b>: ドラッグして位置変更</span></li>
+                    <li class="flex items-start gap-1.5"><i data-lucide="move" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>移動</b>: 左上アイコンまたは本体をドラッグ</span></li>
                     <li class="flex items-start gap-1.5"><i data-lucide="link-2" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>接続</b>: 右端の円をドラッグ</span></li>
                     <li class="flex items-start gap-1.5"><i data-lucide="trash-2" class="w-3.5 h-3.5 mt-0.5 text-rose-500 shrink-0"></i> <span><b>削除</b>: Deleteキーまたは上部ボタン</span></li>
                 </ul>
@@ -194,7 +200,6 @@
         </main>
     </div>
 
-    <!-- 下部編集入力バー (Googleスプレッドシート風) -->
     <div id="bottom-edit-bar" class="bg-white border-t border-slate-200 p-2 sm:p-3 shadow-lg z-30 transition-transform duration-200 translate-y-full fixed bottom-0 left-0 right-0">
         <div class="max-w-4xl mx-auto flex items-center gap-2">
             <input type="text" id="bottom-node-input" class="flex-1 px-3.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="ノードを選択してテキスト編集...">
@@ -305,6 +310,7 @@
             updateBottomBar();
             renderNodes();
             renderConnections();
+            lucide.createIcons();
         }
 
         function updateDeleteButtonState() {
@@ -340,11 +346,13 @@
             nodesContainer.innerHTML = '';
             state.nodes.forEach(node => {
                 const isSelected = state.selectedNodeId === node.id;
+                const isDraggingThis = isDraggingNode && draggedNode?.id === node.id;
+
                 const el = document.createElement('div');
                 el.dataset.nodeId = node.id;
-                el.className = `node-element absolute pointer-events-auto flex items-center justify-center text-center p-2 cursor-move transition-shadow ${
+                el.className = `node-element absolute pointer-events-auto flex items-center justify-center text-center p-2 cursor-grab active:cursor-grabbing transition-all ${
                     isSelected ? 'ring-4 ring-indigo-500 ring-offset-2 shadow-xl z-20' : 'shadow-md hover:shadow-lg z-10'
-                }`;
+                } ${isDraggingThis ? 'is-dragging' : ''}`;
                 el.style.left = `${node.x}px`;
                 el.style.top = `${node.y}px`;
                 el.style.width = `${node.width}px`;
@@ -361,6 +369,13 @@
                 else if (node.type === 'parallelogram') { el.classList.add('shape-parallelogram'); el.style.borderRadius = '6px'; }
                 else if (node.type === 'note') { el.style.borderRadius = '4px'; el.style.borderStyle = 'dashed'; }
                 else el.style.borderRadius = '12px';
+
+                // ドラッグ可能であることを示すグリップハンドルアイコンを左上に配置
+                const dragHandle = document.createElement('div');
+                dragHandle.className = 'absolute -top-2 -left-2 bg-white border border-slate-300 rounded-full p-0.5 shadow-sm text-slate-400 flex items-center justify-center cursor-grab active:cursor-grabbing z-30 pointer-events-none';
+                if (node.type === 'diamond') dragHandle.style.transform = 'rotate(-45deg)';
+                dragHandle.innerHTML = `<i data-lucide="move" class="w-3 h-3 text-slate-500"></i>`;
+                el.appendChild(dragHandle);
 
                 const textEl = document.createElement('div');
                 textEl.className = 'font-medium text-xs sm:text-sm select-none break-words w-full px-1 line-clamp-3 leading-snug pointer-events-none';
@@ -447,11 +462,11 @@
 
                 state.selectedNodeId = node.id;
                 state.selectedConnectionId = null;
-                render();
 
                 draggedNode = node;
                 dragOffset.x = (clientX - state.pan.x) / state.scale - node.x;
                 dragOffset.y = (clientY - state.pan.y) / state.scale - node.y;
+                render();
             };
 
             el.addEventListener('mousedown', (e) => {
@@ -487,7 +502,7 @@
                 updateTempConnection(clientX, clientY);
             } else if (draggedNode) {
                 const dist = Math.hypot(clientX - touchStartPos.x, clientY - touchStartPos.y);
-                if (dist > DRAG_THRESHOLD) {
+                if (dist > DRAG_THRESHOLD && !isDraggingNode) {
                     isDraggingNode = true;
                 }
                 if (isDraggingNode) {
