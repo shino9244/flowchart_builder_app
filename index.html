@@ -55,21 +55,35 @@
 </head>
 <body class="h-full w-full bg-slate-100 text-slate-800 flex flex-col font-sans select-none overflow-hidden">
 
-    <header class="bg-white border-b border-slate-200 px-3 py-2 sm:px-4 sm:py-2.5 flex items-center justify-between z-20 shrink-0 shadow-sm">
+    <header class="bg-white border-b border-slate-200 px-3 py-2 sm:px-4 sm:py-2.5 flex items-center justify-between z-20 shrink-0 shadow-sm gap-2">
         <div class="flex items-center gap-2">
             <div class="bg-indigo-600 text-white p-2 rounded-xl flex items-center justify-center shadow-md shadow-indigo-100">
                 <i data-lucide="git-fork" class="w-5 h-5"></i>
             </div>
-            <div>
+            <div class="hidden sm:block">
                 <h1 class="text-sm sm:text-base font-bold leading-none text-slate-800">FlowCraft</h1>
-                <span class="text-[10px] sm:text-xs text-slate-500 hidden sm:inline">フローチャート エディター</span>
             </div>
         </div>
 
+        <!-- プロジェクト管理UI -->
+        <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <i data-lucide="folder-open" class="w-4 h-4 text-slate-500 ml-1.5 hidden sm:inline"></i>
+            <select id="project-select" class="bg-transparent text-xs sm:text-sm font-medium text-slate-700 focus:outline-none cursor-pointer max-w-[120px] sm:max-w-[180px] truncate"></select>
+            <button id="btn-add-project" class="p-1 hover:bg-white rounded-lg text-slate-600 transition-colors" title="新規プロジェクト追加 (最大30個)">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+            </button>
+            <button id="btn-rename-project" class="p-1 hover:bg-white rounded-lg text-slate-600 transition-colors" title="プロジェクト名を変更">
+                <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+            </button>
+            <button id="btn-delete-project" class="p-1 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-lg transition-colors" title="現在のプロジェクトを削除">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+        </div>
+
         <div class="flex items-center gap-1 sm:gap-2">
-            <button id="btn-delete-selected" disabled class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 hover:bg-rose-100 active:bg-rose-200 disabled:opacity-40 disabled:pointer-events-none transition-all" title="選択中のノード/接続線を削除 (Delete / Backspace)">
+            <button id="btn-delete-selected" disabled class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 hover:bg-rose-100 active:bg-rose-200 disabled:opacity-40 disabled:pointer-events-none transition-all" title="選択中の要素を削除 (Delete / Backspace)">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
-                <span class="hidden md:inline">選択ノードを削除</span>
+                <span class="hidden md:inline">選択要素を削除</span>
             </button>
             <div class="h-5 w-px bg-slate-200 mx-0.5"></div>
             <button id="btn-undo" class="p-2 text-slate-600 hover:bg-slate-100 rounded-lg disabled:opacity-30 transition-colors" title="元に戻す (Ctrl+Z)">
@@ -86,15 +100,12 @@
             <div class="relative group">
                 <button class="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-2.5 py-1.5 sm:px-3.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 shadow-sm transition-colors">
                     <i data-lucide="download" class="w-4 h-4"></i>
-                    <span>保存・共有</span>
+                    <span class="hidden sm:inline">保存・共有</span>
                     <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
                 </button>
                 <div class="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-1.5 hidden group-hover:block group-focus-within:block z-50">
                     <button id="export-png" class="w-full text-left px-4 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
                         <i data-lucide="image" class="w-4 h-4 text-emerald-500"></i> PNG画像として保存
-                    </button>
-                    <button id="export-svg" class="w-full text-left px-4 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                        <i data-lucide="file-code" class="w-4 h-4 text-amber-500"></i> SVGファイルとして保存
                     </button>
                     <div class="border-t border-slate-100 my-1"></div>
                     <button id="export-json" class="w-full text-left px-4 py-2 text-xs sm:text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
@@ -140,11 +151,10 @@
             <div>
                 <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">操作ガイド</h2>
                 <ul class="text-xs text-slate-500 space-y-2">
-                    <li class="flex items-start gap-1.5"><i data-lucide="pointer" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>選択</b>: ノード内をタップ</span></li>
+                    <li class="flex items-start gap-1.5"><i data-lucide="pointer" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>選択</b>: ノード/接続線をクリック</span></li>
                     <li class="flex items-start gap-1.5"><i data-lucide="move" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>移動</b>: ノード内をドラッグ</span></li>
-                    <li class="flex items-start gap-1.5"><i data-lucide="edit-3" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>編集</b>: 下部入力欄でテキスト変更</span></li>
                     <li class="flex items-start gap-1.5"><i data-lucide="link-2" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>接続</b>: 右端の円をドラッグ</span></li>
-                    <li class="flex items-start gap-1.5"><i data-lucide="trash-2" class="w-3.5 h-3.5 mt-0.5 text-rose-500 shrink-0"></i> <span><b>削除</b>: Deleteキーまたは上部ボタン</span></li>
+                    <li class="flex items-start gap-1.5"><i data-lucide="trash-2" class="w-3.5 h-3.5 mt-0.5 text-rose-500 shrink-0"></i> <span><b>線/ノード削除</b>: 選択してDelete</span></li>
                 </ul>
             </div>
         </aside>
@@ -211,7 +221,10 @@
     </div>
 
     <script>
+        const MAX_PROJECTS = 30;
         const state = {
+            projects: [],
+            currentProjectId: null,
             nodes: [], connections: [], scale: 1, pan: { x: 0, y: 0 },
             selectedNodeId: null, selectedConnectionId: null,
             history: [], historyIndex: -1, isConnecting: false, connectingStartNodeId: null
@@ -234,16 +247,121 @@
         const bottomEditBar = document.getElementById('bottom-edit-bar');
         const bottomNodeInput = document.getElementById('bottom-node-input');
         const btnDeleteSelected = document.getElementById('btn-delete-selected');
+        const projectSelect = document.getElementById('project-select');
 
         function init() {
             lucide.createIcons();
             setupColorPalette();
             setupEventListeners();
-            loadFromLocalStorage();
-            if (state.nodes.length === 0) createDefaultFlowchart();
-            saveState();
+            initProjectManager();
             render();
         }
+
+        function generateId() { return 'id_' + Math.random().toString(36).substr(2, 9); }
+
+        /* --- プロジェクト管理ロジック --- */
+        function initProjectManager() {
+            const savedProjects = localStorage.getItem('flowcraft_projects');
+            if (savedProjects) {
+                try {
+                    state.projects = JSON.parse(savedProjects);
+                } catch (e) { state.projects = []; }
+            }
+
+            if (!state.projects || state.projects.length === 0) {
+                const defaultProj = { id: generateId(), name: 'メインフローチャート', data: null };
+                state.projects = [defaultProj];
+            }
+
+            const activeProjId = localStorage.getItem('flowcraft_active_project') || state.projects[0].id;
+            switchProject(activeProjId, false);
+            updateProjectSelectUI();
+        }
+
+        function saveProjectsToStorage() {
+            localStorage.setItem('flowcraft_projects', JSON.stringify(state.projects));
+            localStorage.setItem('flowcraft_active_project', state.currentProjectId);
+        }
+
+        function updateProjectSelectUI() {
+            projectSelect.innerHTML = '';
+            state.projects.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                if (p.id === state.currentProjectId) opt.selected = true;
+                projectSelect.appendChild(opt);
+            });
+        }
+
+        function switchProject(projectId, shouldSaveCurrent = true) {
+            if (shouldSaveCurrent && state.currentProjectId) {
+                const cur = state.projects.find(p => p.id === state.currentProjectId);
+                if (cur) cur.data = { nodes: state.nodes, connections: state.connections };
+            }
+
+            state.currentProjectId = projectId;
+            const target = state.projects.find(p => p.id === projectId) || state.projects[0];
+            state.currentProjectId = target.id;
+
+            if (target.data) {
+                state.nodes = target.data.nodes || [];
+                state.connections = target.data.connections || [];
+            } else {
+                state.nodes = [];
+                state.connections = [];
+                createDefaultFlowchart();
+            }
+
+            state.selectedNodeId = null;
+            state.selectedConnectionId = null;
+            state.history = [];
+            state.historyIndex = -1;
+            saveState();
+            saveProjectsToStorage();
+            updateProjectSelectUI();
+            render();
+        }
+
+        document.getElementById('btn-add-project').onclick = () => {
+            if (state.projects.length >= MAX_PROJECTS) {
+                alert(`作成できるプロジェクトは最大${MAX_PROJECTS}個までです。`);
+                return;
+            }
+            const name = prompt('新しいプロジェクト名を入力してください:', `プロジェクト ${state.projects.length + 1}`);
+            if (name) {
+                const newProj = { id: generateId(), name: name.trim(), data: null };
+                state.projects.push(newProj);
+                switchProject(newProj.id, true);
+            }
+        };
+
+        document.getElementById('btn-rename-project').onclick = () => {
+            const cur = state.projects.find(p => p.id === state.currentProjectId);
+            if (!cur) return;
+            const newName = prompt('プロジェクト名を変更:', cur.name);
+            if (newName && newName.trim()) {
+                cur.name = newName.trim();
+                saveProjectsToStorage();
+                updateProjectSelectUI();
+            }
+        };
+
+        document.getElementById('btn-delete-project').onclick = () => {
+            if (state.projects.length <= 1) {
+                alert('これ以上プロジェクトを削除できません (最低1つ必要です)。');
+                return;
+            }
+            const cur = state.projects.find(p => p.id === state.currentProjectId);
+            if (confirm(`プロジェクト「${cur.name}」を削除してもよろしいですか？`)) {
+                state.projects = state.projects.filter(p => p.id !== state.currentProjectId);
+                switchProject(state.projects[0].id, false);
+            }
+        };
+
+        projectSelect.onchange = (e) => {
+            switchProject(e.target.value, true);
+        };
 
         function createDefaultFlowchart() {
             const startNode = createNode('oval', 140, 100, '処理開始', 1);
@@ -259,8 +377,6 @@
                 { id: generateId(), from: decisionNode.id, to: endNode.id }
             );
         }
-
-        function generateId() { return 'id_' + Math.random().toString(36).substr(2, 9); }
 
         function setupColorPalette() {
             const colorPaletteContainer = document.getElementById('color-palette');
@@ -354,7 +470,7 @@
 
                 const el = document.createElement('div');
                 el.dataset.nodeId = node.id;
-                el.className = `node-element absolute pointer-events-auto cursor-grab active:cursor-grabbing flex items-center justify-center text-center p-2 transition-transform select-none ${
+                el.className = `node-element absolute pointer-events-auto cursor-grab active:cursor-grabbing flex items-center justify-center text-center p-2 transition-all select-none ${
                     isDraggingThis ? 'is-dragging' : ''
                 } ${isSelected ? 'is-selected' : 'shadow-md hover:shadow-lg'}`;
 
@@ -395,6 +511,7 @@
             });
         }
 
+        /* --- 接続線の選択・描画 --- */
         function renderConnections() {
             svgGroup.innerHTML = '';
             state.connections.forEach(conn => {
@@ -411,10 +528,11 @@
                 path.setAttribute('d', `M ${start.x} ${start.y} C ${controlX} ${start.y}, ${controlX} ${end.y}, ${end.x} ${end.y}`);
                 path.setAttribute('fill', 'none');
                 path.setAttribute('stroke', isSelected ? '#4f46e5' : '#64748b');
-                path.setAttribute('stroke-width', isSelected ? '4' : '2.5');
+                path.setAttribute('stroke-width', isSelected ? '5' : '2.5');
                 path.setAttribute('marker-end', isSelected ? 'url(#arrow-selected)' : 'url(#arrow)');
                 path.classList.add('pointer-events-auto', 'cursor-pointer');
 
+                // 線のクリック選択
                 path.onclick = (e) => {
                     e.stopPropagation();
                     state.selectedConnectionId = conn.id;
@@ -461,7 +579,6 @@
                     return;
                 }
 
-                // DOMの破棄を行わずに表示（is-selectedクラス）の差し替えと状態更新を実施
                 document.querySelectorAll('.node-element.is-selected').forEach(n => n.classList.remove('is-selected'));
                 el.classList.add('is-selected');
 
@@ -538,6 +655,8 @@
             if (isDraggingNode) {
                 isDraggingNode = false;
                 if (draggedElement) draggedElement.classList.remove('is-dragging');
+                draggedNode = null;
+                draggedElement = null;
                 saveState();
             }
             draggedNode = null;
@@ -597,9 +716,7 @@
             if (touch) {
                 handlePointerUp(touch.clientX, touch.clientY);
             } else {
-                if (isDraggingNode) { isDraggingNode = false; saveState(); }
-                draggedNode = null;
-                draggedElement = null;
+                if (isDraggingNode) { isDraggingNode = false; draggedNode = null; draggedElement = null; saveState(); }
                 if (isPanning) isPanning = false;
             }
         });
@@ -617,6 +734,7 @@
             render();
         }, { passive: false });
 
+        /* --- 削除処理 --- */
         function deleteSelected() {
             if (state.selectedNodeId) {
                 const targetId = state.selectedNodeId;
@@ -675,19 +793,16 @@
                 state.history.push(currentData);
                 state.historyIndex++;
             }
-            localStorage.setItem('flowcraft_data', currentData);
+            
+            // 現在のプロジェクト情報を更新してローカルストレージへ保存
+            const cur = state.projects.find(p => p.id === state.currentProjectId);
+            if (cur) {
+                cur.data = { nodes: state.nodes, connections: state.connections };
+                saveProjectsToStorage();
+            }
+
             document.getElementById('btn-undo').disabled = state.historyIndex <= 0;
             document.getElementById('btn-redo').disabled = state.historyIndex >= state.history.length - 1;
-        }
-
-        function loadFromLocalStorage() {
-            const data = localStorage.getItem('flowcraft_data');
-            if (data) {
-                try {
-                    const parsed = JSON.parse(data);
-                    state.nodes = parsed.nodes || []; state.connections = parsed.connections || [];
-                } catch (e) { console.error(e); }
-            }
         }
 
         document.getElementById('btn-undo').onclick = () => {
@@ -711,7 +826,7 @@
         };
 
         document.getElementById('btn-clear-all').onclick = () => {
-            if (confirm('すべてのノードと接続を消去しますか？')) {
+            if (confirm('現在のプロジェクトのすべてのノードと接続を消去しますか？')) {
                 state.nodes = []; state.connections = [];
                 state.selectedNodeId = null; state.selectedConnectionId = null;
                 saveState(); render();
