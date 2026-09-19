@@ -354,7 +354,7 @@
 
                 const el = document.createElement('div');
                 el.dataset.nodeId = node.id;
-                el.className = `node-element absolute pointer-events-auto cursor-grab active:cursor-grabbing flex items-center justify-center text-center p-2 transition-all select-none ${
+                el.className = `node-element absolute pointer-events-auto cursor-grab active:cursor-grabbing flex items-center justify-center text-center p-2 transition-transform select-none ${
                     isDraggingThis ? 'is-dragging' : ''
                 } ${isSelected ? 'is-selected' : 'shadow-md hover:shadow-lg'}`;
 
@@ -461,7 +461,7 @@
                     return;
                 }
 
-                // 前回の選択状態を解除して新しいノードを選択表示（DOMの破棄・再生成を回避）
+                // DOMの破棄を行わずに表示（is-selectedクラス）の差し替えと状態更新を実施
                 document.querySelectorAll('.node-element.is-selected').forEach(n => n.classList.remove('is-selected'));
                 el.classList.add('is-selected');
 
@@ -538,8 +538,6 @@
             if (isDraggingNode) {
                 isDraggingNode = false;
                 if (draggedElement) draggedElement.classList.remove('is-dragging');
-                draggedNode = null;
-                draggedElement = null;
                 saveState();
             }
             draggedNode = null;
@@ -599,7 +597,9 @@
             if (touch) {
                 handlePointerUp(touch.clientX, touch.clientY);
             } else {
-                if (isDraggingNode) { isDraggingNode = false; draggedNode = null; draggedElement = null; saveState(); }
+                if (isDraggingNode) { isDraggingNode = false; saveState(); }
+                draggedNode = null;
+                draggedElement = null;
                 if (isPanning) isPanning = false;
             }
         });
