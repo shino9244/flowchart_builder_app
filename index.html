@@ -72,6 +72,9 @@
             <button id="btn-add-project" class="p-1 hover:bg-white rounded-lg text-slate-600 transition-colors" title="新規プロジェクト追加 (最大30個)">
                 <i data-lucide="plus" class="w-4 h-4"></i>
             </button>
+            <button id="btn-duplicate-project" class="p-1 hover:bg-white rounded-lg text-slate-600 transition-colors" title="現在のプロジェクトを複製">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            </button>
             <button id="btn-rename-project" class="p-1 hover:bg-white rounded-lg text-slate-600 transition-colors" title="プロジェクト名を変更">
                 <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
             </button>
@@ -213,9 +216,17 @@
         </main>
     </div>
 
+    <!-- 編集バー (ノード形状変更機能を追加) -->
     <div id="bottom-edit-bar" class="bg-white border-t border-slate-200 p-2 sm:p-3 shadow-lg z-30 transition-transform duration-200 translate-y-full fixed bottom-0 left-0 right-0">
         <div class="max-w-4xl mx-auto flex items-center gap-2">
-            <input type="text" id="bottom-node-input" class="flex-1 px-3.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="ノードを選択してテキスト編集...">
+            <select id="bottom-node-type" class="px-2.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm bg-white text-slate-700 shrink-0 font-medium cursor-pointer">
+                <option value="oval">開始 / 終了</option>
+                <option value="rectangle">処理 (四角)</option>
+                <option value="diamond">判断 (ひし形)</option>
+                <option value="parallelogram">データ</option>
+                <option value="note">メモ</option>
+            </select>
+            <input type="text" id="bottom-node-input" class="flex-1 px-3.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm min-w-0" placeholder="ノードのテキスト編集...">
             <div class="flex items-center gap-1.5 shrink-0" id="color-palette"></div>
         </div>
     </div>
@@ -246,6 +257,7 @@
         const zoomValueEl = document.getElementById('zoom-value');
         const bottomEditBar = document.getElementById('bottom-edit-bar');
         const bottomNodeInput = document.getElementById('bottom-node-input');
+        const bottomNodeType = document.getElementById('bottom-node-type');
         const btnDeleteSelected = document.getElementById('btn-delete-selected');
         const projectSelect = document.getElementById('project-select');
 
@@ -331,6 +343,30 @@
             const name = prompt('新しいプロジェクト名を入力してください:', `プロジェクト ${state.projects.length + 1}`);
             if (name) {
                 const newProj = { id: generateId(), name: name.trim(), data: null };
+                state.projects.push(newProj);
+                switchProject(newProj.id, true);
+            }
+        };
+
+        // プロジェクト複製機能
+        document.getElementById('btn-duplicate-project').onclick = () => {
+            if (state.projects.length >= MAX_PROJECTS) {
+                alert(`作成できるプロジェクトは最大${MAX_PROJECTS}個までです。`);
+                return;
+            }
+            const cur = state.projects.find(p => p.id === state.currentProjectId);
+            if (!cur) return;
+
+            const duplicateName = prompt('複製プロジェクト名を入力してください:', `${cur.name} のコピー`);
+            if (duplicateName) {
+                const clonedNodes = JSON.parse(JSON.stringify(state.nodes));
+                const clonedConnections = JSON.parse(JSON.stringify(state.connections));
+                
+                const newProj = {
+                    id: generateId(),
+                    name: duplicateName.trim(),
+                    data: { nodes: clonedNodes, connections: clonedConnections }
+                };
                 state.projects.push(newProj);
                 switchProject(newProj.id, true);
             }
@@ -443,6 +479,7 @@
                 if (document.activeElement !== bottomNodeInput) {
                     bottomNodeInput.value = selectedNode.text;
                 }
+                bottomNodeType.value = selectedNode.type;
                 updateColorPaletteUI(selectedNode.colorIdx || 0);
             } else {
                 bottomEditBar.classList.add('translate-y-full');
@@ -460,6 +497,19 @@
 
         bottomNodeInput.addEventListener('change', () => {
             saveState();
+        });
+
+        // ノード形状変更イベント
+        bottomNodeType.addEventListener('change', (e) => {
+            const selectedNode = state.nodes.find(n => n.id === state.selectedNodeId);
+            if (selectedNode) {
+                const newType = e.target.value;
+                selectedNode.type = newType;
+                selectedNode.width = newType === 'diamond' ? 120 : (newType === 'note' ? 130 : 140);
+                selectedNode.height = newType === 'diamond' ? 80 : 60;
+                saveState();
+                render();
+            }
         });
 
         function renderNodes() {
@@ -752,7 +802,7 @@
         btnDeleteSelected.onclick = () => deleteSelected();
 
         window.addEventListener('keydown', (e) => {
-            if ((e.key === 'Delete' || e.key === 'Backspace') && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+            if ((e.key === 'Delete' || e.key === 'Backspace') && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'SELECT') {
                 deleteSelected();
             }
         });
