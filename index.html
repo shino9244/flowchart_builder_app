@@ -216,7 +216,7 @@
         </main>
     </div>
 
-    <!-- 編集バー (ノード形状変更機能を追加) -->
+    <!-- 編集バー -->
     <div id="bottom-edit-bar" class="bg-white border-t border-slate-200 p-2 sm:p-3 shadow-lg z-30 transition-transform duration-200 translate-y-full fixed bottom-0 left-0 right-0">
         <div class="max-w-4xl mx-auto flex items-center gap-2">
             <select id="bottom-node-type" class="px-2.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm bg-white text-slate-700 shrink-0 font-medium cursor-pointer">
@@ -260,6 +260,13 @@
         const bottomNodeType = document.getElementById('bottom-node-type');
         const btnDeleteSelected = document.getElementById('btn-delete-selected');
         const projectSelect = document.getElementById('project-select');
+
+        /* --- ダブルタップドラッグズーム管理変数 --- */
+        let lastTapTime = 0;
+        let isDoubleTapDragging = false;
+        let doubleTapStartY = 0;
+        let startScaleForDoubleTap = 1;
+        let zoomCenter = { x: 0, y: 0 };
 
         function init() {
             lucide.createIcons();
@@ -348,7 +355,6 @@
             }
         };
 
-        // プロジェクト複製機能
         document.getElementById('btn-duplicate-project').onclick = () => {
             if (state.projects.length >= MAX_PROJECTS) {
                 alert(`作成できるプロジェクトは最大${MAX_PROJECTS}個までです。`);
@@ -499,7 +505,6 @@
             saveState();
         });
 
-        // ノード形状変更イベント
         bottomNodeType.addEventListener('change', (e) => {
             const selectedNode = state.nodes.find(n => n.id === state.selectedNodeId);
             if (selectedNode) {
@@ -561,7 +566,6 @@
             });
         }
 
-        /* --- 接続線の選択・描画 --- */
         function renderConnections() {
             svgGroup.innerHTML = '';
             state.connections.forEach(conn => {
@@ -582,7 +586,6 @@
                 path.setAttribute('marker-end', isSelected ? 'url(#arrow-selected)' : 'url(#arrow)');
                 path.classList.add('pointer-events-auto', 'cursor-pointer');
 
-                // 線のクリック選択
                 path.onclick = (e) => {
                     e.stopPropagation();
                     state.selectedConnectionId = conn.id;
@@ -740,28 +743,76 @@
             handlePointerUp(e.clientX, e.clientY);
         });
 
+        /* --- タッチ操作＆ダブルタップドラッグズーム処理 --- */
         container.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1 && (e.target === container || e.target.id === 'svg-layer')) {
-                state.selectedNodeId = null;
-                state.selectedConnectionId = null;
-                isPanning = true;
-                panStart.x = e.touches[0].clientX - state.pan.x;
-                panStart.y = e.touches[0].clientY - state.pan.y;
-                render();
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                const now = Date.now();
+                const timeDiff = now - lastTapTime;
+
+                // 300ms以内の再タップでダブルタップドラッグ検出準備
+                if (timeDiff < 300 && timeDiff > 0) {
+                    isDoubleTapDragging = true;
+                    doubleTapStartY = touch.clientY;
+                    startScaleForDoubleTap = state.scale;
+
+                    const rect = container.getBoundingClientRect();
+                    zoomCenter = {
+                        x: touch.clientX - rect.left,
+                        y: touch.clientY - rect.top
+                    };
+                    
+                    e.preventDefault();
+                    lastTapTime = 0;
+                    return;
+                }
+                lastTapTime = now;
+
+                if (e.target === container || e.target.id === 'svg-layer') {
+                    state.selectedNodeId = null;
+                    state.selectedConnectionId = null;
+                    isPanning = true;
+                    panStart.x = touch.clientX - state.pan.x;
+                    panStart.y = touch.clientY - state.pan.y;
+                    render();
+                }
             }
-        }, { passive: true });
+        }, { passive: false });
 
         window.addEventListener('touchmove', (e) => {
             if (e.touches.length === 1) {
+                const touch = e.touches[0];
+
+                if (isDoubleTapDragging) {
+                    if (e.cancelable) e.preventDefault();
+                    
+                    // 下方向スライド(+)で拡大、上方向スライド(-)で縮小
+                    const deltaY = touch.clientY - doubleTapStartY;
+                    const zoomFactor = Math.pow(1.005, deltaY); 
+                    const newScale = Math.min(Math.max(0.3, startScaleForDoubleTap * zoomFactor), 2.5);
+
+                    // タップ位置を中心に拡大・縮小
+                    state.pan.x = zoomCenter.x - (zoomCenter.x - state.pan.x) * (newScale / state.scale);
+                    state.pan.y = zoomCenter.y - (zoomCenter.y - state.pan.y) * (newScale / state.scale);
+                    state.scale = newScale;
+
+                    render();
+                    return;
+                }
+
                 if (state.isConnecting || isDraggingNode || isPanning) {
                     if (e.cancelable) e.preventDefault();
                 }
-                const touch = e.touches[0];
                 handlePointerMove(touch.clientX, touch.clientY);
             }
         }, { passive: false });
 
         window.addEventListener('touchend', (e) => {
+            if (isDoubleTapDragging) {
+                isDoubleTapDragging = false;
+                return;
+            }
+
             const touch = e.changedTouches[0];
             if (touch) {
                 handlePointerUp(touch.clientX, touch.clientY);
@@ -844,7 +895,6 @@
                 state.historyIndex++;
             }
             
-            // 現在のプロジェクト情報を更新してローカルストレージへ保存
             const cur = state.projects.find(p => p.id === state.currentProjectId);
             if (cur) {
                 cur.data = { nodes: state.nodes, connections: state.connections };
