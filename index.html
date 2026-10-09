@@ -43,7 +43,7 @@
             transform: skewX(15deg);
         }
         .node-element.is-dragging {
-            transform: scale(1.05);
+            transform: scale(1.02);
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             z-index: 50 !important;
         }
@@ -85,6 +85,12 @@
         </div>
 
         <div class="flex items-center gap-1 shrink-0">
+            <!-- 自動整列ボタン -->
+            <button id="btn-auto-layout" class="p-1.5 sm:px-2.5 sm:py-2 bg-indigo-50 border border-indigo-200 text-indigo-600 hover:bg-indigo-100 rounded-lg text-xs font-medium flex items-center gap-1 transition-all" title="自動整列">
+                <i data-lucide="layout-grid" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+                <span class="hidden sm:inline">自動整列</span>
+            </button>
+            <div class="h-4 w-px bg-slate-200 mx-0.5"></div>
             <button id="btn-delete-selected" disabled class="p-1.5 sm:px-3 sm:py-2 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-xs font-medium flex items-center gap-1 hover:bg-rose-100 active:bg-rose-200 disabled:opacity-40 disabled:pointer-events-none transition-all" title="選択要素を削除">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                 <span class="hidden lg:inline">選択削除</span>
@@ -145,9 +151,13 @@
                         <div class="w-10 h-6 border-2 border-sky-500 -skew-x-12 bg-white group-hover:scale-105 transition-transform"></div>
                         <span class="text-xs mt-2 font-medium">データ</span>
                     </button>
-                    <button class="add-node-btn col-span-2 flex items-center justify-center gap-2 p-2.5 border border-slate-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-slate-700 group" data-type="note">
+                    <button class="add-node-btn flex flex-col items-center justify-center p-2.5 border border-slate-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-slate-700 group" data-type="group">
+                        <div class="w-10 h-6 border-2 border-dashed border-slate-400 rounded bg-slate-50 group-hover:scale-105 transition-transform"></div>
+                        <span class="text-xs mt-2 font-medium">グループ枠</span>
+                    </button>
+                    <button class="add-node-btn flex flex-col items-center justify-center p-2.5 border border-slate-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50/50 transition-all text-slate-700 group" data-type="note">
                         <i data-lucide="sticky-note" class="w-5 h-5 text-purple-500"></i>
-                        <span class="text-xs font-medium">テキストメモ</span>
+                        <span class="text-xs mt-2 font-medium">メモ</span>
                     </button>
                 </div>
             </div>
@@ -157,8 +167,8 @@
                 <ul class="text-xs text-slate-500 space-y-2">
                     <li class="flex items-start gap-1.5"><i data-lucide="pointer" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>選択</b>: ノード/接続線をクリック</span></li>
                     <li class="flex items-start gap-1.5"><i data-lucide="move" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>移動</b>: ノード内をドラッグ</span></li>
-                    <li class="flex items-start gap-1.5"><i data-lucide="link-2" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>接続</b>: 右端の円をドラッグ</span></li>
-                    <li class="flex items-start gap-1.5"><i data-lucide="zoom-in" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>ダブルタップズーム</b>: ダブルタップ後指を放さず上下スライド</span></li>
+                    <li class="flex items-start gap-1.5"><i data-lucide="box" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>グループ</b>: グループ枠を動かすと中身も連動移動</span></li>
+                    <li class="flex items-start gap-1.5"><i data-lucide="layout-grid" class="w-3.5 h-3.5 mt-0.5 text-indigo-500 shrink-0"></i> <span><b>整列</b>: 上部「自動整列」ボタンで綺麗に配置</span></li>
                 </ul>
             </div>
         </aside>
@@ -191,6 +201,9 @@
                     </button>
                     <button class="add-node-btn p-2.5 bg-sky-50 text-sky-700 rounded-xl flex items-center gap-2 font-medium text-xs" data-type="parallelogram">
                         <div class="w-4 h-3 border border-sky-600 -skew-x-12"></div> データ
+                    </button>
+                    <button class="add-node-btn p-2.5 bg-slate-50 text-slate-700 rounded-xl flex items-center gap-2 font-medium text-xs" data-type="group">
+                        <div class="w-4 h-3 border border-dashed border-slate-500 rounded"></div> グループ枠
                     </button>
                     <button class="add-node-btn p-2.5 bg-purple-50 text-purple-700 rounded-xl flex items-center gap-2 font-medium text-xs" data-type="note">
                         <i data-lucide="sticky-note" class="w-4 h-4 text-purple-600"></i> メモ
@@ -225,6 +238,7 @@
                 <option value="rectangle">処理 (四角)</option>
                 <option value="diamond">判断 (ひし形)</option>
                 <option value="parallelogram">データ</option>
+                <option value="group">グループ枠</option>
                 <option value="note">メモ</option>
             </select>
             <input type="text" id="bottom-node-input" class="flex-1 px-3 py-1.5 sm:px-3.5 sm:py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm min-w-0" placeholder="ノードのテキスト編集...">
@@ -262,7 +276,6 @@
         const btnDeleteSelected = document.getElementById('btn-delete-selected');
         const projectSelect = document.getElementById('project-select');
 
-        /* --- ダブルタップドラッグズーム用変数 --- */
         let lastTapTime = 0;
         let isDoubleTapDragging = false;
         let doubleTapStartY = 0;
@@ -452,16 +465,87 @@
         }
 
         function createNode(type, x, y, text = '', colorIdx = 0) {
-            const defaultTexts = { oval: '開始 / 終了', rectangle: '処理手順', diamond: '条件分岐', parallelogram: 'データ入出力', note: 'メモテキスト' };
+            const defaultTexts = { oval: '開始 / 終了', rectangle: '処理手順', diamond: '条件分岐', parallelogram: 'データ入出力', group: 'グループ枠', note: 'メモテキスト' };
+            const isGroup = type === 'group';
             const node = {
                 id: generateId(), type: type, x: x, y: y,
-                width: type === 'diamond' ? 120 : (type === 'note' ? 130 : 140),
-                height: type === 'diamond' ? 80 : 60,
+                width: isGroup ? 320 : (type === 'diamond' ? 120 : (type === 'note' ? 130 : 140)),
+                height: isGroup ? 240 : (type === 'diamond' ? 80 : 60),
                 text: text || defaultTexts[type] || 'ノード', colorIdx: colorIdx
             };
             state.nodes.push(node);
             return node;
         }
+
+        /* --- 自動整列 (トポロジカルソート＆階層化レイアウト) --- */
+        function autoLayout() {
+            const processNodes = state.nodes.filter(n => n.type !== 'group');
+            if (processNodes.length === 0) return;
+
+            const inDegree = {};
+            const adj = {};
+            processNodes.forEach(n => { inDegree[n.id] = 0; adj[n.id] = []; });
+
+            state.connections.forEach(c => {
+                if (inDegree[c.to] !== undefined && adj[c.from] !== undefined) {
+                    adj[c.from].push(c.to);
+                    inDegree[c.to]++;
+                }
+            });
+
+            const level = {};
+            let queue = processNodes.filter(n => inDegree[n.id] === 0).map(n => n.id);
+            queue.forEach(id => level[id] = 0);
+
+            if (queue.length === 0 && processNodes.length > 0) {
+                queue = [processNodes[0].id];
+                level[processNodes[0].id] = 0;
+            }
+
+            const visited = new Set();
+            while (queue.length > 0) {
+                const curr = queue.shift();
+                visited.add(curr);
+                const currLevel = level[curr] || 0;
+
+                (adj[curr] || []).forEach(nextId => {
+                    level[nextId] = Math.max(level[nextId] || 0, currLevel + 1);
+                    if (!visited.has(nextId) && !queue.includes(nextId)) {
+                        queue.push(nextId);
+                    }
+                });
+            }
+
+            processNodes.forEach(n => { if (level[n.id] === undefined) level[n.id] = 0; });
+
+            const levelsMap = {};
+            processNodes.forEach(n => {
+                const l = level[n.id];
+                if (!levelsMap[l]) levelsMap[l] = [];
+                levelsMap[l].push(n);
+            });
+
+            const startX = 100;
+            const startY = 80;
+            const levelGapY = 130;
+            const nodeGapX = 180;
+
+            Object.keys(levelsMap).forEach(l => {
+                const groupNodes = levelsMap[l];
+                const totalWidth = (groupNodes.length - 1) * nodeGapX;
+                const rowStartX = startX - totalWidth / 2 + 100;
+
+                groupNodes.forEach((node, idx) => {
+                    node.x = rowStartX + idx * nodeGapX;
+                    node.y = startY + parseInt(l) * levelGapY;
+                });
+            });
+
+            saveState();
+            render();
+        }
+
+        document.getElementById('btn-auto-layout').onclick = autoLayout;
 
         function render() {
             nodesContainer.style.transform = `translate(${state.pan.x}px, ${state.pan.y}px) scale(${state.scale})`;
@@ -510,8 +594,8 @@
             if (selectedNode) {
                 const newType = e.target.value;
                 selectedNode.type = newType;
-                selectedNode.width = newType === 'diamond' ? 120 : (newType === 'note' ? 130 : 140);
-                selectedNode.height = newType === 'diamond' ? 80 : 60;
+                selectedNode.width = newType === 'group' ? 320 : (newType === 'diamond' ? 120 : (newType === 'note' ? 130 : 140));
+                selectedNode.height = newType === 'group' ? 240 : (newType === 'diamond' ? 80 : 60);
                 saveState();
                 render();
             }
@@ -519,25 +603,29 @@
 
         function renderNodes() {
             nodesContainer.innerHTML = '';
-            state.nodes.forEach(node => {
+            // グループ枠を背面、通常のノードを前面に描画
+            const sortedNodes = [...state.nodes].sort((a, b) => (a.type === 'group' ? -1 : 1) - (b.type === 'group' ? -1 : 1));
+
+            sortedNodes.forEach(node => {
                 const isSelected = state.selectedNodeId === node.id;
                 const isDraggingThis = isDraggingNode && draggedNode?.id === node.id;
+                const isGroup = node.type === 'group';
 
                 const el = document.createElement('div');
                 el.dataset.nodeId = node.id;
                 el.className = `node-element absolute pointer-events-auto cursor-grab active:cursor-grabbing flex items-center justify-center text-center p-2 transition-all select-none ${
                     isDraggingThis ? 'is-dragging' : ''
-                } ${isSelected ? 'is-selected' : 'shadow-md hover:shadow-lg'}`;
+                } ${isSelected ? 'is-selected' : (isGroup ? 'border-2 border-dashed' : 'shadow-md hover:shadow-lg')}`;
 
                 el.style.left = `${node.x}px`;
                 el.style.top = `${node.y}px`;
                 el.style.width = `${node.width}px`;
                 el.style.height = `${node.height}px`;
-                el.style.zIndex = isSelected ? '20' : '10';
+                el.style.zIndex = isGroup ? '5' : (isSelected ? '20' : '10');
                 el.style.touchAction = 'none';
 
                 const color = COLORS[node.colorIdx] || COLORS[0];
-                el.style.backgroundColor = color.bg;
+                el.style.backgroundColor = isGroup ? 'rgba(241, 245, 249, 0.4)' : color.bg;
                 el.style.borderColor = color.border;
                 el.style.color = color.text;
                 el.style.borderWidth = '2px';
@@ -546,20 +634,25 @@
                 else if (node.type === 'diamond') { el.style.borderRadius = '8px'; el.style.transform = 'rotate(45deg)'; }
                 else if (node.type === 'parallelogram') { el.classList.add('shape-parallelogram'); el.style.borderRadius = '6px'; }
                 else if (node.type === 'note') { el.style.borderRadius = '4px'; el.style.borderStyle = 'dashed'; }
+                else if (isGroup) { el.style.borderRadius = '16px'; el.style.borderStyle = 'dashed'; el.classList.remove('items-center', 'justify-center'); }
                 else el.style.borderRadius = '12px';
 
                 const textEl = document.createElement('div');
-                textEl.className = 'node-text font-medium text-xs sm:text-sm select-none break-words w-full px-1 line-clamp-3 leading-snug pointer-events-none';
+                textEl.className = `node-text font-medium text-xs sm:text-sm select-none break-words px-1 line-clamp-3 leading-snug pointer-events-none ${
+                    isGroup ? 'absolute top-2 left-3 text-slate-500 font-bold uppercase tracking-wider text-xs' : 'w-full'
+                }`;
                 if (node.type === 'diamond') textEl.style.transform = 'rotate(-45deg)';
                 else if (node.type === 'parallelogram') textEl.classList.add('shape-parallelogram-content');
                 textEl.textContent = node.text;
                 el.appendChild(textEl);
 
-                const handle = document.createElement('div');
-                handle.className = 'absolute -right-2 top-1/2 -translate-y-1/2 w-6 h-6 bg-white border-2 border-indigo-600 rounded-full cursor-crosshair shadow-sm flex items-center justify-center z-30 connect-handle pointer-events-auto';
-                if (node.type === 'diamond') handle.style.transform = 'rotate(-45deg) translate(10px, -10px)';
-                handle.dataset.nodeId = node.id;
-                el.appendChild(handle);
+                if (!isGroup) {
+                    const handle = document.createElement('div');
+                    handle.className = 'absolute -right-2 top-1/2 -translate-y-1/2 w-6 h-6 bg-white border-2 border-indigo-600 rounded-full cursor-crosshair shadow-sm flex items-center justify-center z-30 connect-handle pointer-events-auto';
+                    if (node.type === 'diamond') handle.style.transform = 'rotate(-45deg) translate(10px, -10px)';
+                    handle.dataset.nodeId = node.id;
+                    el.appendChild(handle);
+                }
 
                 setupNodeEvents(el, node);
                 nodesContainer.appendChild(el);
@@ -618,6 +711,7 @@
         let draggedElement = null;
         let dragOffset = { x: 0, y: 0 };
         let touchStartPos = { x: 0, y: 0 };
+        let childNodesToMove = []; // グループ移動時の内包ノード群
         const DRAG_THRESHOLD = 3;
 
         function setupNodeEvents(el, node) {
@@ -644,6 +738,22 @@
                 draggedElement = el;
                 dragOffset.x = (clientX - state.pan.x) / state.scale - node.x;
                 dragOffset.y = (clientY - state.pan.y) / state.scale - node.y;
+
+                // グループ枠内にあるノードを検知して一緒に連動移動
+                childNodesToMove = [];
+                if (node.type === 'group') {
+                    state.nodes.forEach(child => {
+                        if (child.id !== node.id &&
+                            child.x >= node.x && child.x + child.width <= node.x + node.width &&
+                            child.y >= node.y && child.y + child.height <= node.y + node.height) {
+                            childNodesToMove.push({
+                                node: child,
+                                offsetX: child.x - node.x,
+                                offsetY: child.y - node.y
+                            });
+                        }
+                    });
+                }
             };
 
             el.addEventListener('mousedown', (e) => {
@@ -684,12 +794,25 @@
                     draggedElement.classList.add('is-dragging');
                 }
                 if (isDraggingNode) {
-                    draggedNode.x = (clientX - state.pan.x) / state.scale - dragOffset.x;
-                    draggedNode.y = (clientY - state.pan.y) / state.scale - dragOffset.y;
-                    
-                    draggedElement.style.left = `${draggedNode.x}px`;
-                    draggedElement.style.top = `${draggedNode.y}px`;
-                    
+                    const newX = (clientX - state.pan.x) / state.scale - dragOffset.x;
+                    const newY = (clientY - state.pan.y) / state.scale - dragOffset.y;
+
+                    draggedNode.x = newX;
+                    draggedNode.y = newY;
+                    draggedElement.style.left = `${newX}px`;
+                    draggedElement.style.top = `${newY}px`;
+
+                    // グループ内のノードを連動移動
+                    childNodesToMove.forEach(item => {
+                        item.node.x = newX + item.offsetX;
+                        item.node.y = newY + item.offsetY;
+                        const childEl = nodesContainer.querySelector(`[data-node-id="${item.node.id}"]`);
+                        if (childEl) {
+                            childEl.style.left = `${item.node.x}px`;
+                            childEl.style.top = `${item.node.y}px`;
+                        }
+                    });
+
                     renderConnections();
                 }
             } else if (isPanning) {
@@ -710,10 +833,12 @@
                 if (draggedElement) draggedElement.classList.remove('is-dragging');
                 draggedNode = null;
                 draggedElement = null;
+                childNodesToMove = [];
                 saveState();
             }
             draggedNode = null;
             draggedElement = null;
+            childNodesToMove = [];
             if (isPanning) isPanning = false;
 
             if (state.isConnecting) {
@@ -743,7 +868,6 @@
             handlePointerUp(e.clientX, e.clientY);
         });
 
-        /* --- 改善版ダブルタップドラッグズーム機能 --- */
         container.addEventListener('touchstart', (e) => {
             if (e.touches.length === 1) {
                 const touch = e.touches[0];
@@ -752,7 +876,7 @@
 
                 if (timeDiff < 300 && timeDiff > 0) {
                     isDoubleTapDragging = true;
-                    isPanning = false; // パン操作とバッティングさせない
+                    isPanning = false;
                     doubleTapStartY = touch.clientY;
                     startScaleForDoubleTap = state.scale;
 
@@ -785,8 +909,6 @@
 
                 if (isDoubleTapDragging) {
                     if (e.cancelable) e.preventDefault();
-                    
-                    // 下スライド(+)で拡大、上スライド(-)で縮小
                     const deltaY = touch.clientY - doubleTapStartY;
                     const zoomFactor = Math.pow(1.008, deltaY); 
                     const newScale = Math.min(Math.max(0.3, startScaleForDoubleTap * zoomFactor), 2.5);
@@ -979,7 +1101,8 @@
 
             state.nodes.forEach(node => {
                 const x = node.x - minX + padding, y = node.y - minY + padding, color = COLORS[node.colorIdx] || COLORS[0];
-                ctx.fillStyle = color.bg; ctx.strokeStyle = color.border; ctx.lineWidth = 2;
+                ctx.fillStyle = node.type === 'group' ? 'rgba(241, 245, 249, 0.4)' : color.bg;
+                ctx.strokeStyle = color.border; ctx.lineWidth = 2;
                 if (node.type === 'oval') { ctx.beginPath(); ctx.roundRect(x, y, node.width, node.height, 999); ctx.fill(); ctx.stroke(); }
                 else if (node.type === 'diamond') {
                     ctx.save(); ctx.translate(x + node.width / 2, y + node.height / 2); ctx.rotate(45 * Math.PI / 180);
